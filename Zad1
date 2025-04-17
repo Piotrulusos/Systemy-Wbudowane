@@ -1,0 +1,129 @@
+// CONFIG2
+#pragma config POSCMOD = HS
+#pragma config OSCIOFNC = OFF
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+// CONFIG1
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = ON
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+#define FOSC 8000000
+#define PRESCALAR 256
+#define TPERSEC ((unsigned long)(FOSC / 2 / PRESCALAR))
+ 
+#include <xc.h> //kompilator
+#include <libpic30.h> //obsługa delay
+ 
+ 
+int main(void) {
+    unsigned char portValue = 0x01; // początkowa wartość binarna (0...255)
+    char current6 = 0, prev6 = 0; // przycisk RD6
+    char current13 = 0, prev13 = 0; // do przycisku RD13
+    TRISA = 0x0000; // Port a na wyjście
+    TRISD = 0xFFFF; // Port d na wejście
+    int value = 1; 
+    int counter = 0;
+ 
+    while (1) {
+        switch (value) {
+            case 1: 
+                LATA = portValue;
+                portValue++;
+                if (portValue == 0xFF) {
+                    portValue = 0; 
+                }
+                break;
+ 
+            case 2: 
+                LATA = portValue;
+                portValue--;
+                if (portValue == 0xFF) {
+                    portValue = 0xFF; 
+                }
+                break;
+            case 3:
+                LATA = portValue ^ (portValue >> 1);
+                portValue++;
+                break;
+            case 4:
+                LATA = portValue ^ (portValue >>1);
+                portValue--;
+                break;
+            case 5:
+                LATA = ((portValue / 10) << 4) | (portValue % 10);
+                portValue++;
+                if (portValue > 99) portValue = 0;
+                break;
+            case 6:
+                LATA = ((portValue / 10) << 4) | (portValue % 10);
+                if (portValue == 0) portValue = 99;
+                else portValue--;
+                break;
+            case 7:
+                while(1){
+                    switch(counter){
+                        case 1:
+                            LATA = 0x07;
+                            counter++;   
+                        case 2:
+                            LATA = 0x0E;
+                            counter++;
+                        case 3:
+                            LATA = 0x1C;
+                            counter++;
+                        case 4:
+                            LATA = 0x38;
+                            counter++;
+                        case 5:
+                            LATA = 0x70;
+                            counter++;
+                        case 6: 
+                            LATA = 0xE0;
+                            counter--;
+                            break;
+                    }
+                                   
+                    
+                    
+                    
+                    
+                    
+                } 
+                break;
+
+
+ 
+            
+        }
+ 
+        prev6 = PORTDbits.RD6;
+        __delay32(1000000);
+        current6 = PORTDbits.RD6;
+        if (prev6 == 1 && current6 == 0) {
+            value++;
+            if (value >= 7) {
+                value = 1;
+            }
+            portValue = 1;
+        }
+        
+        prev13 = PORTDbits.RD13;
+        __delay32(1000000);
+        current13 = PORTDbits.RD13;
+        if (prev13 == 1 && current13 == 0){
+            value--;
+            if (value <= 0) {
+                value = 7;
+            }
+            portValue = 7;
+        }
+        
+    }
+    return 0;
+}
