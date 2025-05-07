@@ -1,0 +1,87 @@
+// PIC24FJ128GA010 Configuration Bit Settings
+
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = ON
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
+
+#include "xc.h"
+#include "libpic30.h"
+#include "adc.h"
+#include "buttons.h"
+
+void init(void) {
+    ADC_SetConfiguration(ADC_CONFIGURATION_DEFAULT);
+    ADC_ChannelEnable(ADC_CHANNEL_POTENTIOMETER);
+    TRISA = 0x0000;
+    BUTTON_Enable(BUTTON_S3);
+    BUTTON_Enable(BUTTON_S4);
+}
+
+int main(void) {
+    init();
+    unsigned char value = 1;
+    unsigned char idx7 = 0, idx8 = 0;
+    unsigned long adc_value;
+    unsigned long opoznienie;
+    unsigned char sp;
+    static const unsigned char wezyk[] = {0x07,0x0E,0x1C,0x38,0x70,0xE0,0x70,0x38,0x1C,0x0E};
+    static const unsigned char kolejka[] = {
+        0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,
+        0x81,0x82,0x84,0x88,0x90,0xA0,0xC0,0xC1,
+        0xC2,0xC4,0xC8,0xD0,0xE0,0xE1,0xE2,0xE4,
+        0xE8,0xF0,0xF1,0xF2,0xF4,0xF8,0xF9,0xFA,
+        0xFC,0xFD,0xFE,0xFF
+    };
+
+    while(1) {
+        adc_value = ADC_Read10bit(ADC_CHANNEL_POTENTIOMETER);
+        if (adc_value == 0xFFFF) continue;
+
+        sp = (adc_value * 5) / 1024;
+        if (sp > 4) sp = 4;
+        switch(sp) {
+            case 0: opoznienie = 40000;    break;
+            case 1: opoznienie = 200000;   break;
+            case 2: opoznienie = 600000;   break;
+            case 3: opoznienie = 1200000;  break;
+            case 4: opoznienie = 2400000;  break;
+        }
+
+        switch(value) {
+            case 1:
+                LATA = wezyk[idx7++];
+                if (idx7 > 9) idx7 = 0;
+                break;
+            case 2:
+                LATA = kolejka[idx8++];
+                if (idx8 >= sizeof(kolejka)) idx8 = 0;
+                break;
+        }
+
+        __delay32(opoznienie);
+
+        if (BUTTON_IsPressed(BUTTON_S3)) {
+            __delay32(40000);
+            value++;
+            if (value > 2) value = 1;
+        }
+
+        if (BUTTON_IsPressed(BUTTON_S4)) {
+            __delay32(40000);
+            if (value == 1) value = 2;
+            else value--;
+        }
+    }
+    return 0;
+}
