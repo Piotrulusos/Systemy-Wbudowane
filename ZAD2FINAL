@@ -72,13 +72,13 @@ int main(void) {
         __delay32(opoznienie);
 
         if (BUTTON_IsPressed(BUTTON_S3)) {
-            __delay32(40000);
+            __delay32(100000);
             value++;
             if (value > 2) value = 1;
         }
 
         if (BUTTON_IsPressed(BUTTON_S4)) {
-            __delay32(40000);
+            __delay32(100000);
             if (value == 1) value = 2;
             else value--;
         }
