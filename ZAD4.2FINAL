@@ -1,0 +1,160 @@
+#include <xc.h>
+#include "lcd.h"
+#include "buttons.h"
+#include "string.h"
+
+void system_init(void) {
+    LCD_Initialize();
+    TRISA = 0x0000;
+    }
+
+void Dyskoteka(void) {
+    LATA = 0xFFFF;
+    __delay32(100000);
+    LATA = 0x0000;
+    __delay32(100000);
+}
+
+void Text1(void) {    
+    // LCD_PutChar(0xFFFF); // blok
+    // LCD_PutChar(0x24); // dolar
+    
+    for (int i = 0; i <9; i++) {
+        LCD_ClearScreen();
+        __delay32(1000000);
+        LCD_PutChar(0x20); // spacja
+        for (int i = 0; i <3; i++){
+            LCD_PutChar(0x21); // wykrzyknik
+        }
+        LCD_PutChar(0x20);
+        LCD_PutChar(0x55); // U
+        LCD_PutChar(0x57); // W
+        LCD_PutChar(0x41); // A
+        LCD_PutChar(0x47); // G
+        LCD_PutChar(0x41); // A
+        LCD_PutChar(0x20);
+        for (int i = 0; i <3; i++){
+            LCD_PutChar(0x21); // wykrzyknik
+        }
+        LCD_PutChar(0x20);
+        LCD_PutChar('\n');
+        LCD_PutChar(0x20); // pusty znak
+        for (int i = 0; i <3; i++){
+            LCD_PutChar(0x21); // wykrzyknik
+        }
+        LCD_PutChar(0x20);
+        LCD_PutChar(0x55); // U
+        LCD_PutChar(0x57); // W
+        LCD_PutChar(0x41); // A
+        LCD_PutChar(0x47); // G
+        LCD_PutChar(0x41); // A
+        LCD_PutChar(0x20);
+        for (int i = 0; i <3; i++){
+            LCD_PutChar(0x21); // wykrzyknik
+        }
+        LCD_PutChar(0x20);
+        __delay32(2000000);
+        
+        
+    }
+    
+    LCD_ClearScreen();
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x5A);  // Z  
+    LCD_PutChar(0x59);  // Y  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x48);  // H  
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x45);  // E  
+    LCD_PutChar(0x53);  // S  
+    LCD_PutChar(0x5A);  // Z  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x3F);  // ?
+    LCD_PutChar('\n');
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x5A);  // Z  
+    LCD_PutChar(0x59);  // Y  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x48);  // H  
+    LCD_PutChar(0x43);  // C  
+    LCD_PutChar(0x45);  // E  
+    LCD_PutChar(0x53);  // S  
+    LCD_PutChar(0x5A);  // Z  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x24);  // $  
+    LCD_PutChar(0x20);  // (spacja)  
+    LCD_PutChar(0x3F);  // ?
+    __delay32(10000000);
+    LCD_ClearScreen();
+    for(int i = 0; i < 32; i++){
+        LCD_PutChar(0xFFFF);
+        __delay32(125000);
+    }
+    LCD_ClearScreen();
+    for (int i = 0; i < 3; i++){
+       LCD_PutChar(0x3E); 
+    }
+    LCD_PutString("KASYNO", 6);
+    for (int i = 0; i < 3; i++){
+       LCD_PutChar(0x3C); 
+    }
+    LCD_PutString("ZAPRASZAMY", 10);
+    
+//    LCD_PutChar("\n");
+//    for (int i = 0; i < 3; i++){
+//       LCD_PutChar(0x3E); 
+//    }
+//    LCD_PutString("ZAPRASZAMY", 10);
+//    for (int i = 0; i < 3; i++){
+//       LCD_PutChar(0x3C); 
+//    }
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+//    const char* text = " To jest przesuwajacy sie tekst! ";
+//    int i = 0;    
+//    while (1) {
+//        LCD_ClearScreen();
+//        LCD_PutString(&text[i], 16);  // Wyświetla 16 znaków od pozycji i
+//
+//        __delay32(3000000);  // Opóźnienie przewijania
+//
+//        i++;
+//        if (text[i + 16] == '\0') 
+//            i = 0;
+//        __delay32(1000000);
+//        
+//    }
+}
+
+
+int main(void) {
+    system_init();
+    Text1();
+    
+
+    while (1) {
+        
+    }
+
+    return 0;
+}
