@@ -1,188 +1,205 @@
-
-// PIC24FJ128GA010 Configuration Bit Settings
-
-// 'C' source line config statements
-
-// CONFIG2
-#pragma config POSCMOD = XT             // Primary Oscillator Select (XT Oscillator mode selected)
-#pragma config OSCIOFNC = ON            // Primary Oscillator Output Function (OSC2/CLKO/RC15 functions as port I/O (RC15))
-#pragma config FCKSM = CSDCMD           // Clock Switching and Monitor (Clock switching and Fail-Safe Clock Monitor are disabled)
-#pragma config FNOSC = PRI              // Oscillator Select (Primary Oscillator (XT, HS, EC))
-#pragma config IESO = ON                // Internal External Switch Over Mode (IESO mode (Two-Speed Start-up) enabled)
-
-// CONFIG1
-#pragma config WDTPS = PS32768          // Watchdog Timer Postscaler (1:32,768)
-#pragma config FWPSA = PR128            // WDT Prescaler (Prescaler ratio of 1:128)
-#pragma config WINDIS = ON              // Watchdog Timer Window (Standard Watchdog Timer enabled,(Windowed-mode is disabled))
-#pragma config FWDTEN = ON              // Watchdog Timer Enable (Watchdog Timer is enabled)
-#pragma config ICS = PGx2               // Comm Channel Select (Emulator/debugger uses EMUC2/EMUD2)
-#pragma config GWRP = OFF               // General Code Segment Write Protect (Writes to program memory are allowed)
-#pragma config GCP = OFF                // General Code Segment Code Protect (Code protection is disabled)
-#pragma config JTAGEN = OFF             // JTAG Port Enable (JTAG port is disabled)
-
-// #pragma config statements should precede project file includes.
-// Use project enums instead of #define for ON and OFF.
-
 #include <xc.h>
 #include <stdio.h>
 #include "lcd.h"
 #include "buttons.h"
 #include "string.h"
+#include "adc.h"
+
+#pragma config POSCMOD = XT
+#pragma config OSCIOFNC = ON
+#pragma config FCKSM = CSDCMD
+#pragma config FNOSC = PRI
+#pragma config IESO = ON
+
+#pragma config WDTPS = PS32768
+#pragma config FWPSA = PR128
+#pragma config WINDIS = ON
+#pragma config FWDTEN = ON
+#pragma config ICS = PGx2
+#pragma config GWRP = OFF
+#pragma config GCP = OFF
+#pragma config JTAGEN = OFF
 
 int czasSekundy = 0;
 int czasSekundy2 = 0;
-int running = 0; // 0 = zatrzymane, 1 = gotowanie
+int running = 0;
+unsigned long adc_value;
+unsigned char sp;
+unsigned char poprzedni_sp = 255;
 
 void system_init(void){
+    ADC_SetConfiguration(ADC_CONFIGURATION_DEFAULT);
+    ADC_ChannelEnable(ADC_CHANNEL_POTENTIOMETER);
     LCD_Initialize();
     TRISA = 0x0000;
-    BUTTON_Enable(BUTTON_S6); // RB4 dodanie 1 minuty
-    BUTTON_Enable(BUTTON_S3); // RB3 dodanie 10 sekund
-    BUTTON_Enable(BUTTON_S4); // RB5 wybór mocy
-    BUTTON_Enable(BUTTON_S5); // RB2 Start/Stop
+    BUTTON_Enable(BUTTON_S6);
+    BUTTON_Enable(BUTTON_S3);
+    BUTTON_Enable(BUTTON_S4);
+    BUTTON_Enable(BUTTON_S5);
 }
 
 void display_start_screen(void){
-    
     LCD_ClearScreen();
     LCD_PutString("EPICKI   ZEGAR", 14);
     LCD_PutChar('\n');
     LCD_PutString("SZACHOWY WITA", 14);
-   
 }
 
-void wyswietlStatus(void){
+void wyswietlStatus(void) {
     LCD_ClearScreen();
-    
     char buffer[16];
     int minuty = czasSekundy / 60;
     int sekundy = czasSekundy % 60;
     LCD_PutString("Gracz1 ", 7);
     sprintf(buffer, ": %02d:%02d", minuty, sekundy);
     LCD_PutString(buffer, strlen(buffer));
-    
     LCD_PutChar('\n');
-    
     char buffer2[16];
     int minuty2 = czasSekundy2 / 60;
     int sekundy2 = czasSekundy2 % 60;
     LCD_PutString("Gracz2 ", 7);
     sprintf(buffer2, ": %02d:%02d", minuty2, sekundy2);
     LCD_PutString(buffer2, strlen(buffer2));
-    
+}
+
+void Potencjometr(void) {
+    while (
+        !BUTTON_IsPressed(BUTTON_S3) &&
+        !BUTTON_IsPressed(BUTTON_S4)
+    ) {
+        adc_value = ADC_Read10bit(ADC_CHANNEL_POTENTIOMETER);
+        if (adc_value == 0xFFFF) continue;
+
+        sp = (adc_value * 4) / 1024;
+        if (sp > 3) sp = 3;
+
+        if (sp != poprzedni_sp) {
+            poprzedni_sp = sp;
+
+            switch(sp) {
+                case 0:
+                    czasSekundy = czasSekundy2 = 15;
+                    break;
+                case 1:
+                    czasSekundy = czasSekundy2 = 60;
+                    break;
+                case 2:
+                    czasSekundy = czasSekundy2 = 180;
+                    break;
+                case 3:
+                    czasSekundy = czasSekundy2 = 300;
+                    break;
+            }
+
+            wyswietlStatus();
+        }
+
+        __delay32(800000);
+    }
+}
+
+void debounce_button_release(unsigned int button) {
+    while(BUTTON_IsPressed(button));
+    __delay32(200000);
 }
 
 void gotowanie(void){
-    while (czasSekundy > 0 && running == 1) {
-        __delay32(4000000); 
-        czasSekundy--;
+    while (1) {
+        if (running == 1) {
+            if (czasSekundy > 0) {
+                __delay32(4000000);
+                czasSekundy--;
+                wyswietlStatus();
 
-        wyswietlStatus();
-
-        
-        if (BUTTON_IsPressed(BUTTON_S5)) {
-            running = 0;
-            LCD_ClearScreen();
-            LCD_PutChar('\n');
-            LCD_PutString("PAUZA", 5);
-            while(BUTTON_IsPressed(BUTTON_S5));
-            return;
+                if (BUTTON_IsPressed(BUTTON_S4)) {
+                    debounce_button_release(BUTTON_S4);
+                    running = 2;
+                }
+            } else {
+                LCD_ClearScreen();
+                LCD_PutString("KONIEC CZASU", 12);
+                LCD_PutChar('\n');
+                LCD_PutString("GRACZA 1 !!!", 12);
+                while(1) {
+                    LATA = 0xFFFF;
+                    __delay32(1000000);
+                    LATA = 0x0000;
+                    __delay32(1000000);
+                }
+            }
         }
-    }
-    
-    while (czasSekundy2 > 0 && running == 2) {
-        __delay32(4000000); 
-        czasSekundy2--;
 
-        wyswietlStatus();
+        if (running == 2) {
+            if (czasSekundy2 > 0) {
+                __delay32(4000000);
+                czasSekundy2--;
+                wyswietlStatus();
 
-        
-        if (BUTTON_IsPressed(BUTTON_S5)) {            
-            running = 1;
-            while(BUTTON_IsPressed(BUTTON_S5));
-            break;            
-        }        
-    }
-
-    
-    if (czasSekundy == 0) {
-        LCD_ClearScreen();
-        LCD_PutString("KONIEC CZASU GRACZA 1", 21);
-        while(1) {
-            LATA = 0xFFFF;
-            __delay32(1000000);
-            LATA = 0x0000;
-            __delay32(1000000);
-        }
-    }
-    
-    if (czasSekundy2 == 0) {
-        LCD_ClearScreen();
-        LCD_PutString("KONIEC CZASU GRACZA 2", 21);
-        while(1) {
-            LATA = 0xFFFF;
-            __delay32(1000000);
-            LATA = 0x0000;
-            __delay32(1000000);
+                if (BUTTON_IsPressed(BUTTON_S3)) {
+                    debounce_button_release(BUTTON_S3);
+                    running = 1;
+                }
+            } else {
+                LCD_ClearScreen();
+                LCD_PutString("KONIEC CZASU", 12);
+                LCD_PutChar('\n');
+                LCD_PutString("GRACZA 2 !!!", 12);
+                while(1) {
+                    LATA = 0xFFFF;
+                    __delay32(1000000);
+                    LATA = 0x0000;
+                    __delay32(1000000);
+                }
+            }
         }
     }
 }
 
-
 void mainLoop(void){
+    Potencjometr();
     wyswietlStatus();
 
     while (1) {
-        if (BUTTON_IsPressed(BUTTON_S4)) {
-            running = 1;
-            gotowanie();
-            __delay32(300000);
-            while(BUTTON_IsPressed(BUTTON_S4));
-        }
-
-        if (BUTTON_IsPressed(BUTTON_S6)) {
-            czasSekundy += 60;
-            wyswietlStatus();
-            __delay32(300000);
-            while(BUTTON_IsPressed(BUTTON_S6));
-        }
-
         if (BUTTON_IsPressed(BUTTON_S3)) {
+            debounce_button_release(BUTTON_S3);
             running = 1;
             gotowanie();
-            __delay32(300000);
-            while(BUTTON_IsPressed(BUTTON_S3));
         }
 
-        if (BUTTON_IsPressed(BUTTON_S5)) {
-            if (czasSekundy > 0) {
-                running = 1;
-                gotowanie();
-            }
-            while(BUTTON_IsPressed(BUTTON_S5));
+        if (BUTTON_IsPressed(BUTTON_S4)) {
+            debounce_button_release(BUTTON_S4);
+            running = 2;
+            gotowanie();
         }
-
     }
 }
 
 int main(void){
     system_init();
     display_start_screen();
-    
+
     while (
         !BUTTON_IsPressed(BUTTON_S3) &&
         !BUTTON_IsPressed(BUTTON_S4) &&
         !BUTTON_IsPressed(BUTTON_S5) &&
         !BUTTON_IsPressed(BUTTON_S6)
     );
-    
+
     while (
         BUTTON_IsPressed(BUTTON_S3) ||
         BUTTON_IsPressed(BUTTON_S4) ||
         BUTTON_IsPressed(BUTTON_S5) ||
         BUTTON_IsPressed(BUTTON_S6)
     );
-    
+
+    LCD_ClearScreen();
+    for (int i = 0; i < 32; i++){
+        LATA = 0xFFFF;
+        LCD_PutChar(0xFFFF);
+        __delay32(150000);
+        LATA = 0x0000;
+    }
+
     mainLoop();
     return 0;
 }
